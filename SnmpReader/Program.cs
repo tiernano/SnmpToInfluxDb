@@ -5,6 +5,7 @@ using Lextm.SharpSnmpLib.Messaging;
 using RestSharp;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -18,7 +19,7 @@ namespace SnmpReader
         static void Main(string[] args)
         {
             int timespan = 30;
-            string server = "192.168.1.249";
+            string server = ConfigurationManager.AppSettings["snmpserver"];
 
            
             Dictionary<int, string> interfaces = new Dictionary<int, string>
@@ -37,11 +38,7 @@ namespace SnmpReader
 
              
             Dictionary<string, Tuple<double, DateTime>> oldCounts = new Dictionary<string, Tuple<double, DateTime>>();
-
-            var client = new RestClient("http://192.168.1.36:8086");
-
-
-
+            
             bool cont = true;
 
             while (cont)
@@ -81,8 +78,8 @@ namespace SnmpReader
                             if (bps > 0)
                             {
                                 oldCounts[key] = new Tuple<double, DateTime>(double.Parse(item.Data.ToString()), DateTime.Now);
-                                InfluxDb db = new InfluxDb("http://192.168.1.36:8086", "root", "root");
-                                var write = db.WriteAsync("pfsense",
+                                InfluxDb db = new InfluxDb(ConfigurationManager.AppSettings["influxdbserver"], ConfigurationManager.AppSettings["influxdbusername"], ConfigurationManager.AppSettings["influxdbpassword"]);
+                                var write = db.WriteAsync(ConfigurationManager.AppSettings["influxdbname"],
                                     new Point()
                                     {
                                         Measurement = "bandwidth",
@@ -92,10 +89,10 @@ namespace SnmpReader
                                         },
                                         Tags = new Dictionary<string, object>()
                                         {
-                                            { "server", "pfsense" } ,
-                                            { "host", "pfsense" },
-                                            {"interface", i.Value },
-                                            {"direction", r.Value },
+                                            { "server", ConfigurationManager.AppSettings["servername"] } ,
+                                            { "host", ConfigurationManager.AppSettings["servername"] },
+                                            { "interface", i.Value },
+                                            { "direction", r.Value },
                                         },
                                         Precision = InfluxDB.Net.Enums.TimeUnit.Seconds
                                     });
@@ -104,7 +101,7 @@ namespace SnmpReader
                             }
                             else
                             {
-
+                                Console.WriteLine("BPS is less than 0... skipping write...");
                             }                    
                         }
 
