@@ -2,7 +2,6 @@
 using InfluxDB.Net.Models;
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
-using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
