@@ -17,7 +17,7 @@ namespace SnmpReader
     {
         static void Main(string[] args)
         {
-            int timespan = 30;
+            int timespan = int.Parse(ConfigurationManager.AppSettings["refreshtime"]);
             string server = ConfigurationManager.AppSettings["snmpserver"];
 
            
@@ -100,6 +100,7 @@ namespace SnmpReader
                             }
                             else
                             {
+                                oldCounts[key] = new Tuple<double, DateTime>(double.Parse(item.Data.ToString()), DateTime.Now);
                                 Console.WriteLine("BPS is less than 0... skipping write...");
                             }                    
                         }
