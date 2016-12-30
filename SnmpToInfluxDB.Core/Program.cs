@@ -15,7 +15,7 @@ namespace SnmpToInfluxDB.Core
     {
         public static void Main(string[] args)
         {
-            int timespan = 60000;
+            int timespan = 5;
             string snmpServer = "192.168.1.249";
             string influxDbServer = "http://192.168.1.34:8086";
             string influxDBUser = "root";
