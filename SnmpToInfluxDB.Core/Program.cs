@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace SnmpToInfluxDB.Core
 {
@@ -15,7 +14,7 @@ namespace SnmpToInfluxDB.Core
     {
         public static void Main(string[] args)
         {
-            int timespan = 30;
+            int timespan = 5;
             string snmpServer = "192.168.1.249";
             string influxDbServer = "http://192.168.1.34:8086";
             string influxDBUser = "root";
@@ -45,6 +44,7 @@ namespace SnmpToInfluxDB.Core
 
             while (cont)
             {
+                Console.WriteLine("Starting Check at: {0}", DateTime.Now);
                 foreach (var i in interfaces)
                 {
                     Console.WriteLine("Checking data for {0}", interfaces[i.Key]);
@@ -56,7 +56,7 @@ namespace SnmpToInfluxDB.Core
                             string identifier = string.Format("1.3.6.1.2.1.2.2.1.{0}.{1}", r.Key, i.Key);
                             string key = string.Format("{0}.{1}", r.Key, i.Key);
 
-                            var data = Messenger.GetAsync(VersionCode.V1,
+                            var data = Messenger.GetAsync(VersionCode.V2,
                                        new IPEndPoint(IPAddress.Parse(snmpServer), 161),
                                        new OctetString("public"),
                                        new List<Variable> { new Variable(new ObjectIdentifier(identifier)) });
@@ -64,14 +64,15 @@ namespace SnmpToInfluxDB.Core
 
                             Console.WriteLine("Data for: {0} - {1} - {2}", i.Value, r.Value, identifier);
                             var item = data.Result.First();
+                            double value = double.Parse(item.Data.ToString()) * 8;
 
                             if (!oldCounts.ContainsKey(key))
                             {
-                                oldCounts[string.Format("{0}.{1}", r.Key, i.Key)] = new Tuple<double, DateTime>(double.Parse(item.Data.ToString()), DateTime.Now);
+                                oldCounts[string.Format("{0}.{1}", r.Key, i.Key)] = new Tuple<double, DateTime>(value, DateTime.Now);                                
                             }
                             else
                             {
-                                double diff = double.Parse(item.Data.ToString()) - oldCounts[key].Item1;
+                                double diff = (value) - oldCounts[key].Item1;
 
                                 var diffTime = TimeSpan.FromTicks(DateTime.Now.Ticks - oldCounts[key].Item2.Ticks).TotalSeconds;
 
@@ -81,7 +82,7 @@ namespace SnmpToInfluxDB.Core
 
                                 if (bps > 0)
                                 {
-                                    oldCounts[key] = new Tuple<double, DateTime>(double.Parse(item.Data.ToString()), DateTime.Now);
+                                    oldCounts[key] = new Tuple<double, DateTime>(value, DateTime.Now);
 
                                     var cpuTime = new LineProtocolPoint("bandwidth",
                                     new Dictionary<string, object>
@@ -109,7 +110,7 @@ namespace SnmpToInfluxDB.Core
                                 }
                                 else
                                 {
-                                    oldCounts[key] = new Tuple<double, DateTime>(double.Parse(item.Data.ToString()), DateTime.Now);
+                                    oldCounts[key] = new Tuple<double, DateTime>(value, DateTime.Now);
                                     Console.WriteLine("BPS is less than 0... skipping write...");
                                 }
                             }
@@ -120,6 +121,7 @@ namespace SnmpToInfluxDB.Core
                         }
                     }
                 }
+                Console.WriteLine("Finished checks... waiting at: {0}", DateTime.Now);
                 Thread.Sleep(TimeSpan.FromSeconds(timespan));
             }
             
